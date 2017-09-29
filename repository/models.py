@@ -59,6 +59,23 @@ class NetworkDevice(models.Model):
 '''
 
 
+
+class UserProfile(models.Model):
+    """
+    用户信息
+    """
+    name = models.CharField(u'姓名', max_length=32)
+    email = models.EmailField(u'邮箱')
+    phone = models.CharField(u'座机', max_length=32)
+    mobile = models.CharField(u'手机', max_length=32)
+
+    class Meta:
+        verbose_name_plural = "用户表"
+
+    def __str__(self):
+        return self.name
+
+
 class Server(models.Model):
     """
     服务器信息
@@ -96,7 +113,7 @@ class Disk(models.Model):
     model = models.CharField('磁盘型号', max_length=32)
     capacity = models.FloatField('磁盘容量GB')
     pd_type = models.CharField('磁盘类型', max_length=32)
-    server_obj = models.ForeignKey('Server',related_name='disk')
+    server_obj = models.ForeignKey('Server', related_name='disk')
 
     class Meta:
         verbose_name_plural = "硬盘表"
@@ -114,7 +131,7 @@ class NIC(models.Model):
     netmask = models.CharField(max_length=64)
     ipaddrs = models.CharField('ip地址', max_length=256)
     up = models.BooleanField(default=False)
-    server_obj = models.ForeignKey('Server',related_name='nic')
+    server_obj = models.ForeignKey('Server', related_name='nic')
 
     class Meta:
         verbose_name_plural = "网卡表"
@@ -134,10 +151,42 @@ class Memory(models.Model):
     sn = models.CharField('内存SN号', max_length=64, null=True, blank=True)
     speed = models.CharField('速度', max_length=16, null=True, blank=True)
 
-    server_obj = models.ForeignKey('Server',related_name='memory')
+    server_obj = models.ForeignKey('Server', related_name='memory')
 
     class Meta:
         verbose_name_plural = "内存表"
 
     def __str__(self):
         return self.slot
+
+
+class ServerRecord(models.Model):
+    """
+    服务器变更记录,creator为空时，表示是服务器汇报的数据，否则人为操作。
+    """
+    server_obj = models.ForeignKey('Server', related_name='ar')
+    content = models.TextField(null=True)
+    creator = models.ForeignKey('UserProfile', null=True, blank=True)
+    create_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "服务器记录表"
+
+    def __str__(self):
+        return self.server_obj.hostname
+
+
+class ErrorLog(models.Model):
+    """
+    错误日志,如：agent采集数据错误 或 运行错误
+    """
+    server_obj = models.ForeignKey('Server', null=True, blank=True)
+    title = models.CharField(max_length=16)
+    content = models.TextField()
+    create_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "错误日志表"
+
+    def __str__(self):
+        return self.title
