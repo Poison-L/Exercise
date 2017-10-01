@@ -3,6 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from repository import models
 import json
+from .plugins import PluginManager
 # Create your views here.
 
 
@@ -22,7 +23,7 @@ def server(request):
     # 通过hostname主机名获取server对象
     server_obj = models.Server.objects.filter(hostname=hostname).first()
     if not server_obj:
-        # 创建服务器信息
+        # 创建服务器信息 实际不可创建
         temp = {}
         temp.update(server_dict['basic']['data'])
         temp.update(server_dict['board']['data'])
@@ -67,43 +68,83 @@ def server(request):
         #     server_obj.sn = temp['sn']
         # server_obj.save()
 
+        # 新老数据对比 服务器数据更新
         temp.pop('hostname')
-        record_list = []
+        server_record_list = []
         for k, new_val in temp.items():
             # 通过反射取看k字段对应的数据库旧值
             old_val = getattr(server_obj, k)
             if old_val != new_val:
-                record = "[%s]的[%s]由[%s]变更为[%s]" % (hostname, k, old_val, new_val)
-                record_list.append(record)
+                server_record = "[%s]的[%s]由[%s]变更为[%s]" % (hostname, k, old_val, new_val)
+                server_record_list.append(server_record)
                 setattr(server_obj, k, new_val)
         server_obj.save()
-        if record_list:
-            models.ServerRecord.objects.create(server_obj=server_obj, content=';'.join(record_list))
+        if server_record_list:
+            models.ServerRecord.objects.create(server_obj=server_obj, content='\n'.join(server_record_list))
 
-        # 硬盘
-        # new_disk = server_dict['disk']['data']
+        """
+        缺少：status=False,写错误日志
+        """
+        new_disk_info_dict = server_dict['disk']['data']
+        # 旧硬盘数据对象列表  [obj1,obj2...]
+        old_disk_info_list = server_obj.disk.all()
+        # 获取新硬盘数据槽位  dict.keys()以列表返回一个字典所有的键
+        new_disk_slot_set = set(new_disk_info_dict.keys())
+        old_disk_slot_set = {obj.slot for obj in old_disk_info_list}
+        # c = t – s  求差集（项在t中，但不在s中）
+        add_slot_list = new_disk_slot_set.difference(old_disk_slot_set)
+        del_slot_list = old_disk_slot_set.difference(new_disk_slot_set)
+        # 交集
+        update_slot_list = new_disk_slot_set.intersection(old_disk_slot_set)
 
+        # 增加硬盘
+        add_disk_record = []
+        # 获取添加槽位
+        for slot in add_slot_list:
+            # 获取添加硬盘信息字典
+            """
+            {'slot': '5', 'pd_type': 'SATA', 'capacity': '476.939', 'model': 'S1AXNSAFB00549A     Samsung SSD 840 PRO Series              DXM06B0Q'}
+            {'slot': '2', 'pd_type': 'SATA', 'capacity': '476.939', 'model': 'S1SZNSAFA01085L     Samsung SSD 850 PRO 512GB               EXM01B6Q'}
+            """
+            value = new_disk_info_dict[slot]
+            add_disk = "[%s]添加硬盘:槽位[%s]，类型[%s]，容量[%s]，型号[%s]" % (
+                hostname, slot, value['pd_type'], value['capacity'], value['model']
+            )
+            add_disk_record.append(add_disk)
+            value['server_obj'] = server_obj
+            models.Disk.objects.create(**value)
+        # 创建服务器变更记录
+        if add_disk_record:
+            models.ServerRecord.objects.create(server_obj=server_obj, content='\n'.join(add_disk_record))
 
+        # 删除硬盘
+        del_disk_record = []
+        models.Disk.objects.filter(server_obj=server_obj, slot__in=del_slot_list).delete()
+        for slot in del_slot_list:
+            value = new_disk_info_dict[slot]
+            del_disk = "[%s]删除硬盘:槽位[%s]，类型[%s]，容量[%s]，型号[%s]" % (
+                hostname, slot, value['pd_type'], value['capacity'], value['model']
+            )
+            del_disk_record.append(del_disk)
+        if del_disk_record:
+            models.ServerRecord.objects.create(server_obj=server_obj, content='\n'.join(del_disk_record))
 
-        # old_disk = models.Disk.objects.filter(server_obj_id=server_obj.id)
-        # old_disk = models.Disk.objects.filter(server_obj=server_obj)
-        # old_disk = server_obj.disk_set.values("slot", "pd_type", "capacity", "model")
-
-
-
-        # set集合
-        # 根据槽位进行比较： new_disk有，old_disk没有 ->  0,4,5   create(**dic)
-        # 根据槽位进行比较： old_disk有，new_disk没有 ->  0,4,5   delete
-
-        # 根据槽位进行比较： old_disk有，new_disk有 ->  1,2,3     update
-
-        # 需求：
-        #      更新时，记录： xx服务器，槽位，xxx由于xx变更为xx
-        # 修改：update
-        # obj = modelx..xxxx.first()
-        # obj.model = "xxxx"
-        # obj. pdtype = "xxx"
-        # obj.save()
+        # 更新硬盘
+        update_disk_record = []
+        for slot in update_slot_list:
+            # 获取更新硬盘信息字典
+            value = new_disk_info_dict[slot]
+            # 获取数据库槽位对应对象  即旧值
+            disk_obj = models.Disk.objects.filter(server_obj=server_obj, slot=slot).first()
+            for k, new_val in value.items():
+                old_val = getattr(disk_obj, k)
+                if old_val != new_val:
+                    update_disk = "[%s]更新硬盘[%s]由[%s]变更为[%s]" % (hostname, k, old_val, new_val)
+                    update_disk_record.append(update_disk)
+                    setattr(disk_obj, k, new_val)
+            disk_obj.save()
+        if update_disk_record:
+            models.ServerRecord.objects.create(server_obj=server_obj, content='\n'.join(update_disk_record))
 
         return HttpResponse("已收到")
 

@@ -150,3 +150,9 @@ STATIC_URL = '/static/'
 # MEDIA_URL = '/media/'
 
 # MEDIA_ROOT = os.path.join(BASE_DIR, "app", "media").replace('\\', '/')
+
+PLUGIN_ITEMS = {
+    "disk": "api.plugins.disk.Disk",
+    "memory": "api.plugins.memory.Memory",
+    "nic": "api.plugins.nic.Nic",
+}
