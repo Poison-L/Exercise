@@ -4,7 +4,7 @@
 # Date: 2017/9/30  0030
 
 from repository import models
-import datetime
+from datetime import datetime
 
 
 class Server(object):
@@ -34,6 +34,9 @@ class Server(object):
                 server_record = "[%s]的[%s]由[%s]变更为[%s]" % (self.server_obj.hostname, k, old_val, new_val)
                 server_record_list.append(server_record)
                 setattr(self.server_obj, k, new_val)
+
+        # 更新时间更新为当前
+        self.server_obj.latest_date = datetime.now()
         self.server_obj.save()
         if server_record_list:
             models.ServerRecord.objects.create(server_obj=self.server_obj, content='\n'.join(server_record_list))
