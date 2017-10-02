@@ -15,6 +15,7 @@ class Disk(object):
         """
         缺少：status=False,写错误日志
         """
+        # 采集新数据字典
         new_disk_info_dict = self.disk_dict['data']
         # 旧硬盘数据对象列表  [obj1,obj2...]
         old_disk_info_list = self.server_obj.disk.all()
@@ -32,11 +33,11 @@ class Disk(object):
         # 获取添加槽位
         for slot in add_slot_list:
             # 获取添加硬盘信息字典
+            value = new_disk_info_dict[slot]
             """
             {'slot': '5', 'pd_type': 'SATA', 'capacity': '476.939', 'model': 'S1AXNSAFB00549A     Samsung SSD 840 PRO Series              DXM06B0Q'}
             {'slot': '2', 'pd_type': 'SATA', 'capacity': '476.939', 'model': 'S1SZNSAFA01085L     Samsung SSD 850 PRO 512GB               EXM01B6Q'}
             """
-            value = new_disk_info_dict[slot]
             add_disk = "[%s]添加硬盘:槽位[%s]，类型[%s]，容量[%s]，型号[%s]" % (
                 self.server_obj.hostname, slot, value['pd_type'], value['capacity'], value['model']
             )
