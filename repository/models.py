@@ -59,7 +59,6 @@ class NetworkDevice(models.Model):
 '''
 
 
-
 class UserProfile(models.Model):
     """
     用户信息
@@ -81,22 +80,32 @@ class Server(models.Model):
     服务器信息
     """
     # asset = models.OneToOneField('Asset')
+    server_status_choices = (
+        (1, '上架'),
+        (2, '在线'),
+        (3, '离线'),
+        (4, '下架'),
+    )
+
+    server_status_id = models.IntegerField(choices=server_status_choices, default=1)
 
     hostname = models.CharField(max_length=128, unique=True)
-    sn = models.CharField('SN号', max_length=64, db_index=True)
+    sn = models.CharField('SN号', max_length=128, db_index=True)
     manufacturer = models.CharField(verbose_name='制造商', max_length=64, null=True, blank=True)
     model = models.CharField('型号', max_length=64, null=True, blank=True)
 
     manage_ip = models.GenericIPAddressField('管理IP', null=True, blank=True)
 
     os_platform = models.CharField('系统', max_length=16, null=True, blank=True)
-    os_version = models.CharField('系统版本', max_length=16, null=True, blank=True)
+    os_version = models.CharField('系统版本', max_length=128, null=True, blank=True)
 
     cpu_count = models.IntegerField('CPU个数', null=True, blank=True)
     cpu_physical_count = models.IntegerField('CPU物理个数', null=True, blank=True)
     cpu_model = models.CharField('CPU型号', max_length=128, null=True, blank=True)
 
     create_at = models.DateTimeField(auto_now_add=True, blank=True)
+
+    latest_date = models.DateTimeField('最后更新时间', null=True, blank=True)
 
     class Meta:
         verbose_name_plural = "服务器表"
