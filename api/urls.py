@@ -8,4 +8,6 @@ from . import views
 
 urlpatterns = [
     url(r'^server.html$', views.server),
+    # API验证
+    url(r'^test.html$', views.test),
 ]
