@@ -1,3 +1,5 @@
 .idea/*
 *.pyc
-
+models/*
+static/*
+db.sqlite3/*
