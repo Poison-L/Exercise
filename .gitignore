@@ -3,3 +3,4 @@
 models/*
 static/*
 db.sqlite3/*
+*.xlsx
