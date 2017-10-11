@@ -95,3 +95,18 @@ def api_auth(func):
 def test(request):
     return HttpResponse("原来是自己人啊...")
 
+
+def tran(request):
+    """
+    事务：某些行为组合成一个原子性操作,可以回滚
+    条件：数据库引擎为innodb
+    """
+    from django.db import transaction
+    try:
+        with transaction.atomic():
+            models.UserProfile.objects.create(name='a1', email='xxx', phone='xxxx', mobile='xxxx')
+            models.Server.objects.create(hostname='uuuuu', sn='FDNKNKHKUVYIRC')
+    except Exception as e:
+        return HttpResponse('出现错误')
+
+    return HttpResponse('执行成功')
