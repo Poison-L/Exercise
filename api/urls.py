@@ -10,4 +10,6 @@ urlpatterns = [
     url(r'^server.html$', views.server),
     # API验证
     url(r'^test.html$', views.test),
+    # 事务
+    url(r'^tran.html$', views.tran),
 ]
